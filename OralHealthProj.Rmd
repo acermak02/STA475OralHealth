@@ -1,0 +1,20 @@
+---
+title: "Oral Health Literacy: Post-test"
+author: "Alex Cermak"
+date: "2023-03-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+colnames <- read_xlsx("posttest.xlsx", n_max = 1)
+data <- read_xlsx("posttest.xlsx", skip = 2)
+colnames
+head(data)
+```
+
