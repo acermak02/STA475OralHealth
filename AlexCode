@@ -1,0 +1,40 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+```
+
+```{r, message = FALSE}
+# read in data and change column names
+data <- read_xlsx("posttest.xlsx", skip = 1)
+colnames(data) <- c("Student_Num","C1_Q1", "C1_Q2", "C1_Q3", "C1_Q4", "C1_Q5A", "C1_Q5B",
+                    "C2_Q1", "C2_Q2", "C2_Q3", "C2_Q4", "C2_Q5", "C2_Q6",
+                    "C3_Q1", "C3_Q2","C3_Q3","C3_Q4","C3_Q5",
+                    "C4_Q1", "C4_Q2", "C4_Q3", "C4_Q4",
+                    "C5_Q1", "C5_Q2", "C5_Q3", "C5_Q4", "C5_Q5", "C5_Q6",
+                    "C6_Q1", "C6_Q2", "C6_Q3", "C6_Q4", "C6_Q5", "C6_Q6",
+                    "C7_Q1", "C7_Q2", "C7_Q3", "C7_Q4", "C7_Q5", "C7_Q6",
+                    "C1415_Q1", "C1415_Q2", "C1415_Q3", "C1415_Q4",
+                    "C1415_Q5", "C1415_Q6")
+
+# remove NA columns
+data <- data[,-c(47:49)]
+
+# rotate the data longer
+data_longer <- pivot_longer(data, cols = -c("Student_Num"),
+                            names_to = "Chapter_Question",
+                            values_to = "Score")
+data_longer <- data_longer %>%
+  separate(Chapter_Question, c("Chapter","Question"))
+
+head(data_longer)
+summary(data_longer$Score)
+tapply(data_longer$Score, data_longer$Chapter, summary)
+# calculate cumulative statistics for each chapter
+cumul_chaptstats <- data_longer %>%
+  group_by(Chapter) %>%
+  summarize(median = median(Score, na.rm = TRUE),
+            mean = mean(Score, na.rm = TRUE))
+
+cumul_chaptstats
+```
