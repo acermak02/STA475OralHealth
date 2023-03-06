@@ -16,7 +16,6 @@ colnames(data) <- c("Student_Num","C1_Q1", "C1_Q2", "C1_Q3", "C1_Q4", "C1_Q5A", 
                     "C7_Q1", "C7_Q2", "C7_Q3", "C7_Q4", "C7_Q5", "C7_Q6",
                     "C1415_Q1", "C1415_Q2", "C1415_Q3", "C1415_Q4",
                     "C1415_Q5", "C1415_Q6")
-
 # remove NA columns
 data <- data[,-c(47:49)]
 
@@ -24,17 +23,59 @@ data <- data[,-c(47:49)]
 data_longer <- pivot_longer(data, cols = -c("Student_Num"),
                             names_to = "Chapter_Question",
                             values_to = "Score")
+
+# create variable for health literacy
+data_longer <- data_longer %>%
+  mutate(Health_Lit = ifelse(Chapter_Question == "C1_Q1" | Chapter_Question =="C1_Q3" |
+                               Chapter_Question =="C2_Q1" | Chapter_Question =="C2_Q4" |
+                               Chapter_Question =="C2_Q5" | Chapter_Question =="C2_Q6" | 
+                               Chapter_Question =="C3_Q1" | Chapter_Question =="C3_Q4" | 
+                               Chapter_Question =="C3_Q5" | Chapter_Question =="C4_Q2" |
+                               Chapter_Question =="C4_Q3" | Chapter_Question =="C5_Q6" |
+                               Chapter_Question =="C6_Q3" | Chapter_Question =="C6_Q6" | 
+                               Chapter_Question =="C7_Q6" |  Chapter_Question =="C1415_Q2" |
+                               Chapter_Question =="C1415_Q4", "Behavior",
+                             ifelse(Chapter_Question == "C1_Q2" | Chapter_Question =="C2_Q3" | 
+                                      Chapter_Question =="C3_Q3" | Chapter_Question =="C5_Q3" |
+                                      Chapter_Question =="C6_Q1" | Chapter_Question =="C6_Q2" | 
+                                      Chapter_Question =="C6_Q4" | Chapter_Question =="C6_Q5", 
+                                    "Product",
+                                    ifelse(Chapter_Question == "C1_Q5A" | Chapter_Question =="C1_Q5B" | 
+                                             Chapter_Question =="C5_Q1" | Chapter_Question =="C5_Q5" | 
+                                             Chapter_Question =="C1415_Q1" | Chapter_Question =="C1415_Q6",
+                                           "Services",
+                                           ifelse(Chapter_Question == "C1_Q4" | Chapter_Question =="C2_Q2" |
+                                             Chapter_Question =="C3_Q2" | Chapter_Question =="C4_Q1" |
+                                               Chapter_Question =="C4_Q4" | Chapter_Question =="C5_Q2" | 
+                                               Chapter_Question =="C5_Q4" | Chapter_Question =="C7_Q1" | 
+                                               Chapter_Question =="C7_Q2" | Chapter_Question =="C7_Q3" | 
+                                               Chapter_Question =="C7_Q4" | Chapter_Question =="C7_Q5" |
+                                               Chapter_Question =="C1415_Q3" | Chapter_Question =="C1415_Q5",
+                                             "Information", NA)))))
+
 data_longer <- data_longer %>%
   separate(Chapter_Question, c("Chapter","Question"))
 
-head(data_longer)
-summary(data_longer$Score)
-tapply(data_longer$Score, data_longer$Chapter, summary)
+# function to calculate the mode
+get_mode <- function(x) {
+  u <- unique(x)
+  tab <- tabulate(match(x,u))
+  u[tab == max(tab)]
+}
+
 # calculate cumulative statistics for each chapter
 cumul_chaptstats <- data_longer %>%
   group_by(Chapter) %>%
   summarize(median = median(Score, na.rm = TRUE),
-            mean = mean(Score, na.rm = TRUE))
+            mean = mean(Score, na.rm = TRUE),
+            mode = get_mode(Score))
 
 cumul_chaptstats
+
+# calculate overall statistics
+cumul_scores <- data_longer %>%
+  summarize(median = median(Score, na.rm = TRUE),
+            mean = mean(Score, na.rm = TRUE),
+            mode = get_mode(Score))
+cumul_scores
 ```
