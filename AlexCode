@@ -1,3 +1,10 @@
+---
+title: "Oral Health Literacy: Post-test"
+author: "Alex Cermak"
+date: "2023-03-01"
+output: html_document
+---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -14,8 +21,9 @@ colnames(data) <- c("Student_Num","C1_Q1", "C1_Q2", "C1_Q3", "C1_Q4", "C1_Q5A", 
                     "C5_Q1", "C5_Q2", "C5_Q3", "C5_Q4", "C5_Q5", "C5_Q6",
                     "C6_Q1", "C6_Q2", "C6_Q3", "C6_Q4", "C6_Q5", "C6_Q6",
                     "C7_Q1", "C7_Q2", "C7_Q3", "C7_Q4", "C7_Q5", "C7_Q6",
-                    "C1415_Q1", "C1415_Q2", "C1415_Q3", "C1415_Q4",
-                    "C1415_Q5", "C1415_Q6")
+                    "C14C15_Q1", "C14C15_Q2", "C14C15_Q3", "C14C15_Q4",
+                    "C14C15_Q5", "C14C15_Q6")
+
 # remove NA columns
 data <- data[,-c(47:49)]
 
@@ -33,8 +41,8 @@ data_longer <- data_longer %>%
                                Chapter_Question =="C3_Q5" | Chapter_Question =="C4_Q2" |
                                Chapter_Question =="C4_Q3" | Chapter_Question =="C5_Q6" |
                                Chapter_Question =="C6_Q3" | Chapter_Question =="C6_Q6" | 
-                               Chapter_Question =="C7_Q6" |  Chapter_Question =="C1415_Q2" |
-                               Chapter_Question =="C1415_Q4", "Behavior",
+                               Chapter_Question =="C7_Q6" |  Chapter_Question =="C14C15_Q2" |
+                               Chapter_Question =="C14C15_Q4", "Behavior",
                              ifelse(Chapter_Question == "C1_Q2" | Chapter_Question =="C2_Q3" | 
                                       Chapter_Question =="C3_Q3" | Chapter_Question =="C5_Q3" |
                                       Chapter_Question =="C6_Q1" | Chapter_Question =="C6_Q2" | 
@@ -42,7 +50,7 @@ data_longer <- data_longer %>%
                                     "Product",
                                     ifelse(Chapter_Question == "C1_Q5A" | Chapter_Question =="C1_Q5B" | 
                                              Chapter_Question =="C5_Q1" | Chapter_Question =="C5_Q5" | 
-                                             Chapter_Question =="C1415_Q1" | Chapter_Question =="C1415_Q6",
+                                             Chapter_Question =="C14C15_Q1" | Chapter_Question =="C14C15_Q6",
                                            "Services",
                                            ifelse(Chapter_Question == "C1_Q4" | Chapter_Question =="C2_Q2" |
                                              Chapter_Question =="C3_Q2" | Chapter_Question =="C4_Q1" |
@@ -50,11 +58,17 @@ data_longer <- data_longer %>%
                                                Chapter_Question =="C5_Q4" | Chapter_Question =="C7_Q1" | 
                                                Chapter_Question =="C7_Q2" | Chapter_Question =="C7_Q3" | 
                                                Chapter_Question =="C7_Q4" | Chapter_Question =="C7_Q5" |
-                                               Chapter_Question =="C1415_Q3" | Chapter_Question =="C1415_Q5",
+                                               Chapter_Question =="C14C15_Q3" | Chapter_Question =="C14C15_Q5",
                                              "Information", NA)))))
 
 data_longer <- data_longer %>%
   separate(Chapter_Question, c("Chapter","Question"))
+
+# rearrange chapter order
+lvls <- c("C1", "C2", "C3", "C4", "C5", "C6", "C7", "C14C15")
+data_longer <- data_longer %>%
+  mutate(Chapter = factor(Chapter, levels = lvls)) %>%
+  arrange(Chapter)
 
 # function to calculate the mode
 get_mode <- function(x) {
@@ -67,7 +81,6 @@ get_mode <- function(x) {
 cumul_chaptstats <- data_longer %>%
   group_by(Chapter) %>%
   summarize(median = median(Score, na.rm = TRUE),
-            mean = mean(Score, na.rm = TRUE),
             mode = get_mode(Score))
 
 cumul_chaptstats
@@ -75,7 +88,25 @@ cumul_chaptstats
 # calculate overall statistics
 cumul_scores <- data_longer %>%
   summarize(median = median(Score, na.rm = TRUE),
-            mean = mean(Score, na.rm = TRUE),
             mode = get_mode(Score))
 cumul_scores
+
+# count the number of missing scores for each student by chapter
+chap_zeros <- data_longer %>%
+  group_by(Student_Num, Chapter) %>%
+  summarize(num_zeros = sum(Score == 0))
+chap_zeros
 ```
+
+```{r}
+# counts of answers for each chapter
+count_score <- table(data_longer$Score)
+count_score
+
+count_scorechap <- table(data_longer$Chapter, data_longer$Score)
+count_scorechap
+
+
+count_stdscore <- table(data_longer$Student_Num, data_longer$Score)
+```
+
