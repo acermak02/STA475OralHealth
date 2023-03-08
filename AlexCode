@@ -61,12 +61,12 @@ data_longer <- data_longer %>%
                                                Chapter_Question =="C14C15_Q3" | Chapter_Question =="C14C15_Q5",
                                              "Information", NA)))))
 
-data_longer <- data_longer %>%
+data_longer2 <- data_longer %>%
   separate(Chapter_Question, c("Chapter","Question"))
 
 # rearrange chapter order
 lvls <- c("C1", "C2", "C3", "C4", "C5", "C6", "C7", "C14C15")
-data_longer <- data_longer %>%
+data_longer2 <- data_longer2 %>%
   mutate(Chapter = factor(Chapter, levels = lvls)) %>%
   arrange(Chapter)
 
@@ -78,7 +78,7 @@ get_mode <- function(x) {
 }
 
 # calculate cumulative statistics for each chapter
-cumul_chaptstats <- data_longer %>%
+cumul_chaptstats <- data_longer2 %>%
   group_by(Chapter) %>%
   summarize(median = median(Score, na.rm = TRUE),
             mode = get_mode(Score))
@@ -86,13 +86,13 @@ cumul_chaptstats <- data_longer %>%
 cumul_chaptstats
 
 # calculate overall statistics
-cumul_scores <- data_longer %>%
+cumul_scores <- data_longer2 %>%
   summarize(median = median(Score, na.rm = TRUE),
             mode = get_mode(Score))
 cumul_scores
 
 # count the number of missing scores for each student by chapter
-chap_zeros <- data_longer %>%
+chap_zeros <- data_longer2 %>%
   group_by(Student_Num, Chapter) %>%
   summarize(num_zeros = sum(Score == 0))
 chap_zeros
@@ -100,13 +100,27 @@ chap_zeros
 
 ```{r}
 # counts of answers for each chapter
-count_score <- table(data_longer$Score)
+count_score <- table(data_longer2$Score)
 count_score
 
-count_scorechap <- table(data_longer$Chapter, data_longer$Score)
+# counts of student scores by chapter
+count_scorechap <- table(data_longer2$Chapter, data_longer2$Score)
 count_scorechap
 
+# counts of student score by student
+count_stdscore <- table(data_longer2$Student_Num, data_longer2$Score)
 
-count_stdscore <- table(data_longer$Student_Num, data_longer$Score)
+# create variable that indicates which students were absent
+chap_zeros <- chap_zeros %>%
+  group_by(Student_Num, Chapter) %>%
+  mutate(Absences = ifelse(Chapter == "C1", ifelse(num_zeros == 6, "Absent", "Not Absent"),
+                        ifelse(Chapter == "C2", ifelse(num_zeros == 6, "Absent", "Not Absent"),
+                            ifelse(Chapter == "C3", ifelse(num_zeros == 5, "Absent", "Not Absent"),
+                                ifelse(Chapter == "C4", ifelse(num_zeros == 4, "Absent", "Not Absent"),
+                                    ifelse(Chapter == "C5", ifelse(num_zeros == 6, "Absent", "Not Absent"),
+                                        ifelse(Chapter == "C6", ifelse(num_zeros == 6, "Absent", "Not Absent"),
+                                            ifelse(Chapter == "C7", ifelse(num_zeros == 6, "Absent", "Not Absent"),
+                                                ifelse(Chapter == "C14C15", ifelse(num_zeros == 6, "Absent", "Not Absent"),NA)))))))))
+chap_zeros
 ```
 
