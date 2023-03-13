@@ -1,0 +1,175 @@
+---
+title: "Oral health"
+author: ""
+date: "2023-03-01"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+
+```
+
+
+```{r}
+# Ziyi: Model fitting (cumulative scores), Descriptive statistics (individual scores)
+
+data <- read_xlsx("eBook Posttest Data.xlsx", skip = 1) #read in data
+
+colnames(data) <- c("Student_Num","C1_Q1", "C1_Q2", "C1_Q3", "C1_Q4", "C1_Q5A", "C1_Q5B",
+                    "C2_Q1", "C2_Q2", "C2_Q3", "C2_Q4", "C2_Q5", "C2_Q6",
+                    "C3_Q1", "C3_Q2","C3_Q3","C3_Q4","C3_Q5",
+                    "C4_Q1", "C4_Q2", "C4_Q3", "C4_Q4",
+                    "C5_Q1", "C5_Q2", "C5_Q3", "C5_Q4", "C5_Q5", "C5_Q6",
+                    "C6_Q1", "C6_Q2", "C6_Q3", "C6_Q4", "C6_Q5", "C6_Q6",
+                    "C7_Q1", "C7_Q2", "C7_Q3", "C7_Q4", "C7_Q5", "C7_Q6",
+                    "C1415_Q1", "C1415_Q2", "C1415_Q3", "C1415_Q4",
+                    "C1415_Q5", "C1415_Q6") #rename all column 
+
+
+data <- data[,-c(47:49)] # remove NA columns
+
+data_longer <- pivot_longer(data, cols = -c("Student_Num"),
+                            names_to = "Chapter_Question",
+                            values_to = "Score") # making data into long form
+
+data_longer <- data_longer %>%
+  mutate(Health_Lit = ifelse(Chapter_Question == "C1_Q1" | Chapter_Question =="C1_Q3" |
+                               Chapter_Question =="C2_Q1" | Chapter_Question =="C2_Q4" |
+                               Chapter_Question =="C2_Q5" | Chapter_Question =="C2_Q6" | 
+                               Chapter_Question =="C3_Q1" | Chapter_Question =="C3_Q4" | 
+                               Chapter_Question =="C3_Q5" | Chapter_Question =="C4_Q2" |
+                               Chapter_Question =="C4_Q3" | Chapter_Question =="C5_Q6" |
+                               Chapter_Question =="C6_Q3" | Chapter_Question =="C6_Q6" | 
+                               Chapter_Question =="C7_Q6" |  Chapter_Question =="C1415_Q2" |
+                               Chapter_Question =="C1415_Q4", "Behavior",
+                             ifelse(Chapter_Question == "C1_Q2" | Chapter_Question =="C2_Q3" | 
+                                    Chapter_Question =="C3_Q3" | Chapter_Question =="C5_Q3" |
+                                    Chapter_Question =="C6_Q1" | Chapter_Question =="C6_Q2" | 
+                                    Chapter_Question =="C6_Q4" | Chapter_Question =="C6_Q5", 
+                                    "Product",
+                             ifelse(Chapter_Question == "C1_Q5A" |Chapter_Question=="C1_Q5B"|
+                                    Chapter_Question =="C5_Q1"|Chapter_Question=="C5_Q5"|
+                              Chapter_Question=="C1415_Q1"|Chapter_Question=="C1415_Q6","Services",
+                             ifelse(Chapter_Question == "C1_Q4"|Chapter_Question =="C2_Q2"|
+                                    Chapter_Question =="C3_Q2" | Chapter_Question =="C4_Q1" |
+                                    Chapter_Question =="C4_Q4" | Chapter_Question =="C5_Q2"|
+                                    Chapter_Question =="C5_Q4" | Chapter_Question =="C7_Q1"|                                            Chapter_Question =="C7_Q2" | Chapter_Question =="C7_Q3" |                                           Chapter_Question =="C7_Q4" | Chapter_Question =="C7_Q5" |
+                                    Chapter_Question=="C1415_Q3"|Chapter_Question=="C1415_Q5",
+                                          "Information", NA)))))  #create variable for health literacy
+
+data_longer <- data_longer %>%
+  separate(Chapter_Question, c("Chapter","Question"))
+
+data_longer$Score <- factor(data_longer$Score,ordered = TRUE, levels = c("0","1", "2", "3","4")) #nominal variable
+
+
+```
+
+#Descriptive statistics (individual scores)
+
+```{r}
+
+# score <- data_longer$Score
+# hist(score)
+
+# contingency table
+count_individual <- table(data_longer$Student_Num, data_longer$Score)
+count_individual
+
+
+# function to calculate the mode
+get_mode <- function(x) {
+  u <- unique(x)
+  tab <- tabulate(match(x,u))
+  u[tab == max(tab)]
+}
+
+
+# line plot for individual's score 
+
+#ggplot(data = data, aes(x=Student_Num, y=C1_Q1)) + 
+ # geom_line(aes(colour=Student_Num))
+
+
+#count of score for individual performance and calculate the mean/median/mode for counts
+
+
+data_score0 <- data_longer %>%
+  filter(Score == 0) %>%
+  group_by(Student_Num) %>%
+  summarize(Score0 = n()) 
+
+data_score0 <- data_score0 %>%
+  summarize(mean=mean(Score0,na.rm = TRUE),
+            median=median(Score0,na.rm = TRUE),
+            mode=get_mode(Score0))
+
+data_score1 <- data_longer %>%
+  filter(Score == 1) %>%
+  group_by(Student_Num) %>%
+  summarize(Score1 = n())
+
+data_score1 <- data_score1 %>%
+  summarize(mean=mean(Score1,na.rm = TRUE),
+            median=median(Score1,na.rm = TRUE),
+            mode=mean(get_mode(Score1))) # there are two mode, so take the average
+
+data_score2 <- data_longer %>%
+  filter(Score == 2) %>%
+  group_by(Student_Num) %>%
+  summarize(Score2 = n()) 
+
+data_score2 <- data_score2 %>%
+  summarize(mean=mean(Score2,na.rm = TRUE),
+            median=median(Score2,na.rm = TRUE),
+            mode=get_mode(Score2))
+
+data_score3 <- data_longer %>%
+  filter(Score == 3) %>%
+  group_by(Student_Num) %>%
+  summarize(Score3 = n()) 
+
+data_score3 <- data_score3 %>%
+  summarize(mean=mean(Score3,na.rm = TRUE),
+            median=median(Score3,na.rm = TRUE),
+            mode=get_mode(Score3))
+
+data_score4 <- data_longer %>%
+  filter(Score == 4) %>%
+  group_by(Student_Num) %>%
+  summarize(Score4 = n()) 
+
+data_score4 <- data_score4 %>%
+  summarize(mean=mean(Score4,na.rm = TRUE),
+            median=median(Score4,na.rm = TRUE),
+            mode=get_mode(Score4))
+
+
+data_summary <- rbind(data_score0, data_score1, data_score2,data_score3,data_score4) #combine four table 
+data_summary$score_cate <- c("0","1","2","3","4")
+
+ggplot(data = data_summary, aes(x=score_cate, y=mean)) + 
+  geom_line(aes(colour=mean))
+
+
+
+```
+
+
+```{r}
+# Model fitting (cumulative scores)
+
+
+
+
+```
+
+
+
+
+
