@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readxl)
+library(kableExtra)
+library(scales)
 ```
 
 ```{r, message = FALSE}
@@ -81,31 +83,76 @@ get_mode <- function(x) {
 cumul_chaptstats <- data_longer2 %>%
   group_by(Chapter) %>%
   summarize(median = median(Score, na.rm = TRUE),
+            mean = mean(Score, na.rm = TRUE),
             mode = get_mode(Score))
-
-cumul_chaptstats
+kable(cumul_chaptstats,
+      caption = "Averages of Post-Test Scores by Chapter") %>%
+  kable_styling(full_width = FALSE)
 
 # calculate overall statistics
 cumul_scores <- data_longer2 %>%
   summarize(median = median(Score, na.rm = TRUE),
+            mean = mean(Score, na.rm = TRUE),
             mode = get_mode(Score))
-cumul_scores
+kable(cumul_scores, 
+      caption = "Overall Averages for Post-Test Scores") %>%
+  kable_styling(full_width = FALSE)
 
 # count the number of missing scores for each student by chapter
 chap_zeros <- data_longer2 %>%
   group_by(Student_Num, Chapter) %>%
   summarize(num_zeros = sum(Score == 0))
-chap_zeros
 ```
 
-```{r}
-# counts of answers for each chapter
+```{r, message = FALSE}
+# counts of answers over all chapters
 count_score <- table(data_longer2$Score)
-count_score
+kable(count_score, col.names = c("Score", "Count"),
+      caption = "Overall Post-Test Score Counts") %>%
+  kable_styling(full_width = FALSE)
+
+# percentages over all chapters
+prop_score <- data_longer2 %>%
+  group_by(Score) %>%
+  summarize(Percent = scales::percent(n()/nrow(.), accuracy = 0.01))
+kable(prop_score, caption = "Overal Post-Test Score Percentages") %>%
+  kable_styling(full_width = FALSE)
+
 
 # counts of student scores by chapter
 count_scorechap <- table(data_longer2$Chapter, data_longer2$Score)
-count_scorechap
+row.names(count_scorechap) <- c("Chapter 1", "Chapter 2", "Chapter 3",
+                                "Chapter 4", "Chapter 5", "Chapter 6",
+                                "Chapter 7", "Chapters 14,15")
+kable(count_scorechap, col.names = c("Missing/No Answer",
+                                     "Correct Answer, Correct Spelling",
+                                     "Correct Answer, Incorrect Spelling",
+                                     "Incorrect Answer, Correct Spelling",
+                                     "Incorrect Answer, Incorrect Spelling"),
+      caption = "Counts of Post-Test Scores by Chapter") %>%
+  kable_styling(full_width = FALSE)
+
+# proportions of scores by chapter
+prop_scorechap <- data_longer2 %>%
+  select(Chapter, Score) %>%
+  group_by(Chapter) %>%
+  summarize(Percent_0 = scales::percent(sum(Score == 0)/ length(Score), 
+                                        accuracy = 0.01),
+            Percent_1 = scales::percent(sum(Score == 1)/ length(Score),
+                                        accuracy = 0.01),
+            Percent_2 = scales::percent(sum(Score == 2)/ length(Score),
+                                        accuracy = 0.01),
+            Percent_3 = scales::percent(sum(Score == 3)/ length(Score),
+                                        accuracy = 0.01),
+            Percent_4 = scales::percent(sum(Score == 4)/ length(Score),
+                                        accuracy = 0.01))
+kable(prop_scorechap,col.names = c("Chapter","Missing/No Answer",
+                                     "Correct Answer, Correct Spelling",
+                                     "Correct Answer, Incorrect Spelling",
+                                     "Incorrect Answer, Correct Spelling",
+                                     "Incorrect Answer, Incorrect Spelling"),
+      caption = "Percentages of Post-Test Scores by Chapter") %>%
+  kable_styling(full_width = FALSE)
 
 # counts of student score by student
 count_stdscore <- table(data_longer2$Student_Num, data_longer2$Score)
@@ -113,14 +160,33 @@ count_stdscore <- table(data_longer2$Student_Num, data_longer2$Score)
 # create variable that indicates which students were absent
 chap_zeros <- chap_zeros %>%
   group_by(Student_Num, Chapter) %>%
-  mutate(Absences = ifelse(Chapter == "C1", ifelse(num_zeros == 6, "Absent", "Not Absent"),
-                        ifelse(Chapter == "C2", ifelse(num_zeros == 6, "Absent", "Not Absent"),
-                            ifelse(Chapter == "C3", ifelse(num_zeros == 5, "Absent", "Not Absent"),
-                                ifelse(Chapter == "C4", ifelse(num_zeros == 4, "Absent", "Not Absent"),
-                                    ifelse(Chapter == "C5", ifelse(num_zeros == 6, "Absent", "Not Absent"),
-                                        ifelse(Chapter == "C6", ifelse(num_zeros == 6, "Absent", "Not Absent"),
-                                            ifelse(Chapter == "C7", ifelse(num_zeros == 6, "Absent", "Not Absent"),
-                                                ifelse(Chapter == "C14C15", ifelse(num_zeros == 6, "Absent", "Not Absent"),NA)))))))))
-chap_zeros
+  mutate(Absences = ifelse(Chapter == "C1", ifelse(num_zeros == 6,
+                                                   "Absent", "Present"),
+                        ifelse(Chapter == "C2", ifelse(num_zeros == 6, 
+                                                       "Absent", "Present"),
+                            ifelse(Chapter == "C3", ifelse(num_zeros == 5, 
+                                                           "Absent", "Present"),
+                                ifelse(Chapter == "C4", ifelse(num_zeros == 4, 
+                                                               "Absent", "Present"),
+                                    ifelse(Chapter == "C5", ifelse(num_zeros == 6, 
+                                                                   "Absent", "Present"),
+                                        ifelse(Chapter == "C6", ifelse(num_zeros == 6, 
+                                                                       "Absent", "Present"),
+                                            ifelse(Chapter == "C7", ifelse(num_zeros == 6,
+                                                                           "Absent", "Present"),
+                                                ifelse(Chapter == "C14C15", ifelse(num_zeros == 6,
+                                                                                   "Absent", "Present"),
+                                                       NA)))))))))
+
+# get counts from each chapter
+chap_zeros_count <- chap_zeros %>%
+  group_by(Chapter, Absences) %>%
+  summarize(n = n()) %>%
+  pivot_wider(names_from = Absences,
+              values_from = n)
+kable(chap_zeros_count, col.names = c("Chapter", "Absent", "Present"),
+      caption = "Counts of Absences by Chapter") %>%
+  kable_styling(full_width = FALSE)
 ```
+
 
