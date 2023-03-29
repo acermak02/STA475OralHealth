@@ -11,6 +11,9 @@ library(tidyverse)
 library(readxl)
 library(kableExtra)
 library(scales)
+library(nnet)
+library(car)
+library(lmtest)
 ```
 
 ```{r, message = FALSE}
@@ -87,7 +90,7 @@ cumul_chaptstats <- data_longer2 %>%
             mode = get_mode(Score))
 kable(cumul_chaptstats,
       caption = "Averages of Post-Test Scores by Chapter") %>%
-  kable_styling(full_width = FALSE)
+  kable_styling(full_width = FALSE) 
 
 # calculate overall statistics
 cumul_scores <- data_longer2 %>%
@@ -116,8 +119,7 @@ prop_score <- data_longer2 %>%
   group_by(Score) %>%
   summarize(Percent = scales::percent(n()/nrow(.), accuracy = 0.01))
 kable(prop_score, caption = "Overal Post-Test Score Percentages") %>%
-  kable_styling(full_width = FALSE)
-
+  kable_styling(full_width = FALSE) 
 
 # counts of student scores by chapter
 count_scorechap <- table(data_longer2$Chapter, data_longer2$Score)
@@ -130,7 +132,7 @@ kable(count_scorechap, col.names = c("Missing/No Answer",
                                      "Incorrect Answer, Correct Spelling",
                                      "Incorrect Answer, Incorrect Spelling"),
       caption = "Counts of Post-Test Scores by Chapter") %>%
-  kable_styling(full_width = FALSE)
+  kable_styling(full_width = FALSE) 
 
 # proportions of scores by chapter
 prop_scorechap <- data_longer2 %>%
@@ -187,6 +189,68 @@ chap_zeros_count <- chap_zeros %>%
 kable(chap_zeros_count, col.names = c("Chapter", "Absent", "Present"),
       caption = "Counts of Absences by Chapter") %>%
   kable_styling(full_width = FALSE)
+
+# merge absences with data
+data_longer2c <- merge(data_longer2, chap_zeros, by = c("Student_Num","Chapter"))
 ```
+
+```{r}
+# assumptions
+
+# model run: health literacy
+test <- multinom(Score ~ Health_Lit, data = data_longer2c)
+summary(test)
+
+zscore <- summary(test)$coefficients/summary(test)$standard.errors
+pvals <- (1-pnorm(abs(zscore), 0, 1))*2
+pvals
+
+# model run: health literacy + chapter
+test2 <- multinom(Score ~ Health_Lit + Chapter, data = data_longer2c)
+summary(test)
+
+zscore2 <- summary(test2)$coefficients/summary(test2)$standard.errors
+pvals2 <- (1-pnorm(abs(zscore2), 0, 1))*2
+pvals2
+
+# model run: full model
+full_test <- multinom(Score ~ Health_Lit + Chapter + Absences, data = data_longer2c)
+summary(full_test)
+
+zscore_full <- summary(full_test)$coefficients/summary(full_test)$standard.errors
+pvals_full <- (1-pnorm(abs(zscore_full), 0, 1))*2
+pvals_full
+```
+
+```{r}
+# likelihood ratio tests
+lrtest(test2,test)
+
+lrtest(full_test, test2)
+```
+
+
+```{r}
+# split data in two based on spelling and correct answer, with missing scores omitted
+data_longer3 <- data_longer2c %>%
+  mutate(Correct_Ans = ifelse(Score == 1, 1,
+                              ifelse(Score == 2, 1,
+                                     ifelse(Score == 3, 0,
+                                            ifelse(Score == 4, 0,
+                                                   ifelse(Score == 0, 0, NA))))),
+         Correct_Spell = ifelse(Score == 1, 1,
+                                ifelse(Score == 2, 0,
+                                       ifelse(Score == 3, 1,
+                                              ifelse(Score == 4, 0,
+                                                     ifelse(Score == 0, 0, NA))))))
+
+# logistic regressions on correctness and spelling separately
+test_correctans <- glm(Correct_Ans ~ Health_Lit + Chapter + Absences, family = "binomial", data = data_longer3)
+summary(test_correctans)
+
+test_correctspell <- glm(Correct_Spell~ Health_Lit + Chapter + Absences, family = "binomial", data = data_longer3)
+summary(test_correctspell)
+```
+
 
 
