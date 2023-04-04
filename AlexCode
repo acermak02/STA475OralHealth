@@ -14,6 +14,7 @@ library(scales)
 library(nnet)
 library(car)
 library(lmtest)
+library(ggplot2)
 ```
 
 ```{r, message = FALSE}
@@ -91,6 +92,47 @@ cumul_chaptstats <- data_longer2 %>%
 kable(cumul_chaptstats,
       caption = "Averages of Post-Test Scores by Chapter") %>%
   kable_styling(full_width = FALSE) 
+
+## plot it!
+ggplot(aes(x = Chapter, y = mean, group = 1), data = cumul_chaptstats)+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label = round(mean, digits = 4)),
+            vjust = -1)+
+  labs(x = "Chapters",
+       y = "Average Score")+
+  ggtitle("Average Scores for Each Chapter")+
+  scale_y_continuous(limits = c(0,2))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"))
+ggsave("cumul.png")
+
+## remove zeros and plot to compare
+cumul_cstat_no0 <- data_longer2 %>%
+  group_by(Chapter) %>%
+  subset(Score != 0) %>%
+  summarize(median = median(Score, na.rm = TRUE),
+            mean = mean(Score, na.rm = TRUE),
+            mode = get_mode(Score))
+
+ ggplot(aes(x = Chapter, y = mean, group = 1), data = cumul_cstat_no0)+
+   geom_line()+
+   geom_point()+
+   geom_text(aes(label = round(mean, digits = 4)),
+             vjust = -1)+
+   labs(x = "Chapters",
+        y = "Average Score")+
+   ggtitle("Average Scores for Each Chapter",
+           subtitle = "With Missing Scores Removed")+
+   scale_y_continuous(limits = c(0,2))+
+   theme_bw()+
+   theme(plot.title = element_text(hjust = 0.5),
+         plot.subtitle = element_text(hjust = 0.5),
+         panel.border = element_blank(),
+         axis.line = element_line(color = "black"))
+ggsave("cumul_nozero.png")
 
 # calculate overall statistics
 cumul_scores <- data_longer2 %>%
@@ -195,7 +237,8 @@ data_longer2c <- merge(data_longer2, chap_zeros, by = c("Student_Num","Chapter")
 ```
 
 ```{r}
-# assumptions
+data_longer2c$Score <- factor(data_longer2c$Score, ordered = FALSE)
+data_longer2c$Score <- relevel(data_longer2c$Score, ref = "4")
 
 # model run: health literacy
 test <- multinom(Score ~ Health_Lit, data = data_longer2c)
@@ -203,7 +246,9 @@ summary(test)
 
 zscore <- summary(test)$coefficients/summary(test)$standard.errors
 pvals <- (1-pnorm(abs(zscore), 0, 1))*2
-pvals
+rownames(pvals) <- c("0","1","2","3")
+kable(round(pvals, digits = 4), row.names = TRUE)%>%
+  kable_styling()
 
 # model run: health literacy + chapter
 test2 <- multinom(Score ~ Health_Lit + Chapter, data = data_longer2c)
@@ -211,7 +256,9 @@ summary(test)
 
 zscore2 <- summary(test2)$coefficients/summary(test2)$standard.errors
 pvals2 <- (1-pnorm(abs(zscore2), 0, 1))*2
-pvals2
+rownames(pvals2) <- c("0","1","2","3")
+kable(round(pvals2, digits = 4), row.names = TRUE) %>%
+  kable_styling()
 
 # model run: full model
 full_test <- multinom(Score ~ Health_Lit + Chapter + Absences, data = data_longer2c)
@@ -219,7 +266,18 @@ summary(full_test)
 
 zscore_full <- summary(full_test)$coefficients/summary(full_test)$standard.errors
 pvals_full <- (1-pnorm(abs(zscore_full), 0, 1))*2
-pvals_full
+rownames(pvals_full) <- c("0","1","2","3")
+kable(round(subset(pvals_full, select = `(Intercept)`:ChapterC3), digits = 4), row.names = TRUE) %>%
+  kable_styling()
+
+kable(round(subset(pvals_full, select = ChapterC4:AbsencesPresent), digits = 4), row.names = TRUE) %>%
+  kable_styling()
+
+kable(round(subset(coef(full_test), select = `(Intercept)`:Health_LitServices), digits = 4)) %>%
+  kable_styling()
+
+
+exp(coef(full_test))
 ```
 
 ```{r}
@@ -248,9 +306,22 @@ data_longer3 <- data_longer2c %>%
 test_correctans <- glm(Correct_Ans ~ Health_Lit + Chapter + Absences, family = "binomial", data = data_longer3)
 summary(test_correctans)
 
+kable(coef(summary(test_correctans))[,4], col.names = "P-Values")%>%
+  kable_styling(full_width = FALSE)
+
 test_correctspell <- glm(Correct_Spell~ Health_Lit + Chapter + Absences, family = "binomial", data = data_longer3)
 summary(test_correctspell)
+
+kable(coef(summary(test_correctspell))[,4], col.names = "P-Values") %>%
+  kable_styling(full_width = FALSE)
 ```
 
+```{r}
+# chi square tests
+chi1<- chisq.test(count_scorechap)
+chi1
+zero_table <- table(data_longer2c$Score, data_longer2c$Absences)
 
-
+chi2 <- chisq.test(zero_table)
+chi2
+```
